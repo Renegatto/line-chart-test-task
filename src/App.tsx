@@ -99,7 +99,7 @@ const redZoneFor = (xs: number[]): {
   },
 } => {
   const xsZScore = zScoreFor(xs)
-  const sorted = xs.sort((a,b) => b - a)
+  const sorted = xs.sort((a,b) => a - b)
   return {
     zScore: xsZScore,
     isInRedZone: x => Math.abs(xsZScore.zScoreOf(x)) > 1,
@@ -109,31 +109,83 @@ const redZoneFor = (xs: number[]): {
     }
   }}
 
+type HighlightXDeviation<Payload> = {
+  gradient: ReactElement,
+  lineStroke: string,
+  dot: (props: {payload: Payload}) => ReactElement,
+}
+const highlightXDeviation = <Payload,>(
+  deviationColor: string,
+  mainColor: string,
+  minX: number,
+  maxX: number,
+  minAllowed: number,
+  maxAllowed: number,
+  gradientId: string,
+  getX: (payload: Payload) => number,
+): HighlightXDeviation<Payload> => {
+  console.log(
+    minX,
+    maxX,
+    minAllowed,
+    maxAllowed,
+  )
+  const fillChunk = fillLinearGradientChunk(
+    deviationColor,
+    mainColor,
+    Math.abs(maxX - minX),
+  )
+  const normalize = (n: number) => Math.abs(n - minX)
+  return {
+    gradient:
+      <linearGradient id={gradientId} x1={0} y1={1} x2={0} y2={0}>
+        {fillChunk(normalize(minAllowed), normalize(maxAllowed))}
+      </linearGradient>,
+    lineStroke: `url(#${gradientId})`,
+    dot: (props: any & {payload: Payload}) => {
+      // exposed type does not reflect actual props being passed
+      // into 'Dot' in 'Line.renderDots'
+      const x = getX(props.payload)
+      const isDeviation = x > maxAllowed || x < minAllowed
+      return <Dot
+        {...props}
+        fill={isDeviation ? "red" : "white"}
+        stroke={isDeviation ? "red" : mainColor}
+      />
+    },
+  }
+}
+
 export default function App() {
   const pvsRedZone = redZoneFor(data.map(x => x.pv))
+  const uvsRedZone = redZoneFor(data.map(x => x.uv))
 
-  const highlightZScoreZone = fillLinearGradientChunk(
+  const pvZIndexDeviationHighlight = highlightXDeviation<typeof data[number]>(
+    'red',
+    '#8884d8',
+    pvsRedZone.xBounds.min,
+    pvsRedZone.xBounds.max,
+    pvsRedZone.zScore.bounds.lower,
+    pvsRedZone.zScore.bounds.upper,
+    'zScoreLinePv',
+    x => x.pv,
+  )
+  const uvZIndexDeviationHighlight = highlightXDeviation<typeof data[number]>(
     'red',
     '#82ca9d',
-    Math.abs(pvsRedZone.xBounds.max - pvsRedZone.xBounds.min),
+    uvsRedZone.xBounds.min,
+    uvsRedZone.xBounds.max,
+    uvsRedZone.zScore.bounds.lower,
+    uvsRedZone.zScore.bounds.upper,
+    'zScoreLineUv',
+    x => x.uv,
   )
-
   return (<>
     <ResponsiveContainer width={"100%"} height={300}>
       <LineChart data={data} margin={{ top: 20 }} accessibilityLayer>
         <defs>
-          <linearGradient id="zScoreLinePv" x1={0} y1={0} x2={0} y2={1}>
-            {
-              highlightZScoreZone(
-                pvsRedZone.zScore.bounds.lower,
-                pvsRedZone.zScore.bounds.upper,
-              )
-            }
-          </linearGradient>
-          <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8}/>
-            <stop offset="95%" stopColor="#82ca9d" stopOpacity={0}/>
-          </linearGradient>
+          {pvZIndexDeviationHighlight.gradient}
+          {uvZIndexDeviationHighlight.gradient}
         </defs>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="name" padding={{ left: 30, right: 30 }} />
@@ -143,21 +195,15 @@ export default function App() {
         <Line
           type="monotone"
           dataKey="pv"
-          stroke="url(#zScoreLinePv)"
-          dot={(props: unknown & {payload: any}) => {
-            // exposed type does not reflect actual props being passed
-            // into 'Dot' in 'Line.renderDots'
-            const isInRedZone = pvsRedZone.isInRedZone(props.payload.pv)
-            return <Dot
-              {...props}
-              fill={isInRedZone ? "red" : "white"}
-              stroke={isInRedZone ? "red" : "#82ca9d"}
-            />
-          }}
-          activeDot={{ r: 8, fill: "blue" }}
-        >
-        </Line>
-        <Line type="monotone" dataKey="uv" stroke="#82ca9d"></Line>
+          stroke={pvZIndexDeviationHighlight.lineStroke}
+          dot={pvZIndexDeviationHighlight.dot}
+        />
+        <Line
+          type="monotone"
+          dataKey="uv"
+          stroke={uvZIndexDeviationHighlight.lineStroke}
+          dot={uvZIndexDeviationHighlight.dot}
+        />
       </LineChart>
     </ResponsiveContainer>
   </>);
