@@ -79,62 +79,6 @@ const redZoneFor = (xs: number[]): {
     }
   }}
 
-type HighlightXDeviation<Payload> = {
-  gradient: ReactElement,
-  lineStroke: string,
-  dot: (props: {payload: Payload}) => ReactElement,
-  activeDot: (props: {payload: Payload}) => ReactElement,
-}
-const highlightYDeviation = <Payload,>(
-  deviationColor: string,
-  mainColor: string,
-  minY: number,
-  maxY: number,
-  minAllowed: number,
-  maxAllowed: number,
-  gradientId: string,
-  getY: (payload: Payload) => number,
-): HighlightXDeviation<Payload> => {
-  console.log(
-    minY,
-    maxY,
-    minAllowed,
-    maxAllowed,
-  )
-  const fillChunk = fillLinearGradientChunk(
-    deviationColor,
-    mainColor,
-    Math.abs(maxY - minY),
-  )
-  const normalize = (n: number) => Math.abs(n - minY)
-  return {
-    gradient:
-      <linearGradient id={gradientId} x1={0} y1={1} x2={0} y2={0}>
-        {fillChunk(normalize(minAllowed), normalize(maxAllowed))}
-      </linearGradient>,
-    lineStroke: `url(#${gradientId})`,
-    dot: (props: any & {payload: Payload}) => {
-      // exposed type does not reflect actual props being passed
-      // into 'Dot' in 'Line.renderDots'
-      const y = getY(props.payload)
-      const isDeviation = y > maxAllowed || y < minAllowed
-      return <Dot
-        {...props}
-        fill={isDeviation ? "red" : "white"}
-        stroke={isDeviation ? "red" : mainColor}
-      />
-    },
-    activeDot: (props: any & {payload: Payload}) => {
-      const y = getY(props.payload)
-      const isDeviation = y > maxAllowed || y < minAllowed
-      return <Dot
-        {...props}
-        fill={isDeviation ? "red" : mainColor}
-      />
-    },
-  }
-}
-
 export default function App() {
   const pvsRedZone = redZoneFor(data.map(x => x.pv))
   const uvsRedZone = redZoneFor(data.map(x => x.uv))
@@ -190,4 +134,62 @@ export default function App() {
       </LineChart>
     </ResponsiveContainer>
   </>);
+}
+
+// Highlighting out-of-bounds line areas and points
+
+type HighlightYDeviation<Payload> = {
+  gradient: ReactElement,
+  lineStroke: string,
+  dot: (props: {payload: Payload}) => ReactElement,
+  activeDot: (props: {payload: Payload}) => ReactElement,
+}
+const highlightYDeviation = <Payload,>(
+  deviationColor: string,
+  mainColor: string,
+  minY: number,
+  maxY: number,
+  minAllowed: number,
+  maxAllowed: number,
+  gradientId: string,
+  getY: (payload: Payload) => number,
+): HighlightYDeviation<Payload> => {
+  console.log(
+    minY,
+    maxY,
+    minAllowed,
+    maxAllowed,
+  )
+  const fillChunk = fillLinearGradientChunk(
+    deviationColor,
+    mainColor,
+    Math.abs(maxY - minY),
+  )
+  const normalize = (n: number) => Math.abs(n - minY)
+  return {
+    gradient:
+      <linearGradient id={gradientId} x1={0} y1={1} x2={0} y2={0}>
+        {fillChunk(normalize(minAllowed), normalize(maxAllowed))}
+      </linearGradient>,
+    lineStroke: `url(#${gradientId})`,
+    dot: (props: any & {payload: Payload}) => {
+      // exposed type does not reflect actual props being passed
+      // into 'Dot' in 'Line.renderDots'
+      const y = getY(props.payload)
+      const isDeviation = y > maxAllowed || y < minAllowed
+      return <Dot
+        {...props}
+        fill={isDeviation ? "red" : "white"}
+        stroke={isDeviation ? "red" : mainColor}
+      />
+    },
+    activeDot: (props: any & {payload: Payload}) => {
+      const y = getY(props.payload)
+      const isDeviation = y > maxAllowed || y < minAllowed
+      return <Dot
+        {...props}
+        fill={isDeviation ? "red" : mainColor}
+      />
+    },
+  }
 }
