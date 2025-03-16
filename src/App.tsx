@@ -1,5 +1,5 @@
 import "./styles.css";
-import React, { FC, ReactElement } from "react";
+import { ReactElement } from "react";
 import {
   LineChart,
   Line,
@@ -9,13 +9,9 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  LabelList,
-  Area,
-  AreaChart,
-  ComposedChart,
   Dot,
 } from "recharts";
-import {mean, stdDev} from '@mathigon/fermat'
+import { mean, stdDev } from '@mathigon/fermat'
 import { fillLinearGradientChunk } from "./utils/FillGradientChunk";
 
 const data = [
@@ -93,7 +89,7 @@ const zScoreFor = (
 const redZoneFor = (xs: number[]): {
   zScore: CalculatedZScore,
   isInRedZone: (x: number) => boolean,
-  xBounds: {
+  bounds: {
     min: number,
     max: number,
   },
@@ -103,7 +99,7 @@ const redZoneFor = (xs: number[]): {
   return {
     zScore: xsZScore,
     isInRedZone: x => Math.abs(xsZScore.zScoreOf(x)) > 1,
-    xBounds: {
+    bounds: {
       min: sorted[0] || 0,
       max: sorted[sorted.length - 1] || 0,
     }
@@ -115,28 +111,28 @@ type HighlightXDeviation<Payload> = {
   dot: (props: {payload: Payload}) => ReactElement,
   activeDot: (props: {payload: Payload}) => ReactElement,
 }
-const highlightXDeviation = <Payload,>(
+const highlightYDeviation = <Payload,>(
   deviationColor: string,
   mainColor: string,
-  minX: number,
-  maxX: number,
+  minY: number,
+  maxY: number,
   minAllowed: number,
   maxAllowed: number,
   gradientId: string,
-  getX: (payload: Payload) => number,
+  getY: (payload: Payload) => number,
 ): HighlightXDeviation<Payload> => {
   console.log(
-    minX,
-    maxX,
+    minY,
+    maxY,
     minAllowed,
     maxAllowed,
   )
   const fillChunk = fillLinearGradientChunk(
     deviationColor,
     mainColor,
-    Math.abs(maxX - minX),
+    Math.abs(maxY - minY),
   )
-  const normalize = (n: number) => Math.abs(n - minX)
+  const normalize = (n: number) => Math.abs(n - minY)
   return {
     gradient:
       <linearGradient id={gradientId} x1={0} y1={1} x2={0} y2={0}>
@@ -146,8 +142,8 @@ const highlightXDeviation = <Payload,>(
     dot: (props: any & {payload: Payload}) => {
       // exposed type does not reflect actual props being passed
       // into 'Dot' in 'Line.renderDots'
-      const x = getX(props.payload)
-      const isDeviation = x > maxAllowed || x < minAllowed
+      const y = getY(props.payload)
+      const isDeviation = y > maxAllowed || y < minAllowed
       return <Dot
         {...props}
         fill={isDeviation ? "red" : "white"}
@@ -155,8 +151,8 @@ const highlightXDeviation = <Payload,>(
       />
     },
     activeDot: (props: any & {payload: Payload}) => {
-      const x = getX(props.payload)
-      const isDeviation = x > maxAllowed || x < minAllowed
+      const y = getY(props.payload)
+      const isDeviation = y > maxAllowed || y < minAllowed
       return <Dot
         {...props}
         fill={isDeviation ? "red" : mainColor}
@@ -169,21 +165,21 @@ export default function App() {
   const pvsRedZone = redZoneFor(data.map(x => x.pv))
   const uvsRedZone = redZoneFor(data.map(x => x.uv))
 
-  const pvZIndexDeviationHighlight = highlightXDeviation<typeof data[number]>(
+  const pvZIndexDeviationHighlight = highlightYDeviation<typeof data[number]>(
     'red',
     '#8884d8',
-    pvsRedZone.xBounds.min,
-    pvsRedZone.xBounds.max,
+    pvsRedZone.bounds.min,
+    pvsRedZone.bounds.max,
     pvsRedZone.zScore.bounds.lower,
     pvsRedZone.zScore.bounds.upper,
     'zScoreLinePv',
     x => x.pv,
   )
-  const uvZIndexDeviationHighlight = highlightXDeviation<typeof data[number]>(
+  const uvZIndexDeviationHighlight = highlightYDeviation<typeof data[number]>(
     'red',
     '#82ca9d',
-    uvsRedZone.xBounds.min,
-    uvsRedZone.xBounds.max,
+    uvsRedZone.bounds.min,
+    uvsRedZone.bounds.max,
     uvsRedZone.zScore.bounds.lower,
     uvsRedZone.zScore.bounds.upper,
     'zScoreLineUv',
