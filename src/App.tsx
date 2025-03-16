@@ -179,7 +179,6 @@ const highlightYDeviation = <Payload,>(
       const isDeviation = y > maxAllowed || y < minAllowed
       return <Dot
         {...props}
-        fill={isDeviation ? "red" : "white"}
         stroke={isDeviation ? "red" : mainColor}
       />
     },
