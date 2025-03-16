@@ -113,6 +113,7 @@ type HighlightXDeviation<Payload> = {
   gradient: ReactElement,
   lineStroke: string,
   dot: (props: {payload: Payload}) => ReactElement,
+  activeDot: (props: {payload: Payload}) => ReactElement,
 }
 const highlightXDeviation = <Payload,>(
   deviationColor: string,
@@ -151,6 +152,14 @@ const highlightXDeviation = <Payload,>(
         {...props}
         fill={isDeviation ? "red" : "white"}
         stroke={isDeviation ? "red" : mainColor}
+      />
+    },
+    activeDot: (props: any & {payload: Payload}) => {
+      const x = getX(props.payload)
+      const isDeviation = x > maxAllowed || x < minAllowed
+      return <Dot
+        {...props}
+        fill={isDeviation ? "red" : mainColor}
       />
     },
   }
@@ -197,12 +206,16 @@ export default function App() {
           dataKey="pv"
           stroke={pvZIndexDeviationHighlight.lineStroke}
           dot={pvZIndexDeviationHighlight.dot}
+          activeDot={(props: any) =>
+            pvZIndexDeviationHighlight.activeDot(props)}
         />
         <Line
           type="monotone"
           dataKey="uv"
           stroke={uvZIndexDeviationHighlight.lineStroke}
           dot={uvZIndexDeviationHighlight.dot}
+          activeDot={(props: any) =>
+            uvZIndexDeviationHighlight.activeDot(props)}
         />
       </LineChart>
     </ResponsiveContainer>
